@@ -10,19 +10,15 @@ function SurveyDesigner() {
   };
 
   return (
-<div className="text-red-500 bg-blue-200 p-4 m-4">
-  If this text is red with blue background and spacing, Tailwind is working!
-</div>
-
-    // <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-    //   <div className="max-w-7xl mx-auto">
-    //     <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Survey Designer</h1>
-    //     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-    //       <QuestionDesigner onAddQuestion={addQuestion} />
-    //       <QuestionPreview questions={questions} />
-    //     </div>
-    //   </div>
-    // </div>
+    <div className="min-h-screen bg-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">Survey Designer</h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <QuestionDesigner onAddQuestion={addQuestion} />
+          <QuestionPreview questions={questions} />
+        </div>
+      </div>
+    </div>
   );
 }
 
