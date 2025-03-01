@@ -92,7 +92,7 @@ function QuestionDesigner({ onAddQuestion }) {
         )}
         <button 
           type="submit"
-          className="w-full flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
         >
           <Save size={20} className="mr-2" />
           Add Question
