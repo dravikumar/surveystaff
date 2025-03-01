@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
+// Import supabase but don't use it yet
 import { supabase } from '../supabaseClient';
 
 // Create the authentication context
@@ -14,51 +15,70 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [authChangeEvent, setAuthChangeEvent] = useState(null);
 
   // Check for existing session when the component mounts
   useEffect(() => {
-    // Get session from local storage
+    let isMounted = true;
+    console.log('AuthProvider useEffect running');
+    
     const getSession = async () => {
       try {
-        setLoading(true);
+        console.log('Checking for session...');
+        const { data, error } = await supabase.auth.getSession();
         
-        // Check if there's an active session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        console.log('Session response:', data, error);
         
         if (error) {
-          throw error;
+          console.error('Session error:', error);
+          if (isMounted) setError(error.message);
+        } else if (data?.session) {
+          console.log('Session found, user:', data.session.user);
+          if (isMounted) setUser(data.session.user);
+        } else {
+          console.log('No session found');
         }
-        
-        if (session) {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          setUser(currentUser);
-        }
-      } catch (error) {
-        setError(error.message);
-        console.error('Error getting session:', error.message);
+      } catch (err) {
+        console.error('Error in getSession:', err);
+        if (isMounted) setError(err.message);
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          console.log('Setting loading to false');
+          setLoading(false);
+        }
       }
     };
 
+    // Call getSession
     getSession();
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session) {
-          const { data: { user: currentUser } } = await supabase.auth.getUser();
-          setUser(currentUser);
-        } else {
-          setUser(null);
+      (event, session) => {
+        console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
+        setAuthChangeEvent({ event, timestamp: new Date().toISOString() });
+        
+        if (isMounted) {
+          if (session) {
+            console.log('Setting user from auth change:', session.user);
+            setUser(session.user);
+          } else {
+            console.log('Setting user to null from auth change');
+            setUser(null);
+          }
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     // Cleanup subscription on unmount
     return () => {
-      if (authListener) authListener.subscription.unsubscribe();
+      console.log('Cleanup function running');
+      isMounted = false;
+      if (authListener && authListener.subscription) {
+        console.log('Cleaning up auth listener');
+        authListener.subscription.unsubscribe();
+      }
     };
   }, []);
 
@@ -75,25 +95,37 @@ export function AuthProvider({ children }) {
       return data;
     } catch (error) {
       setError(error.message);
-      console.error('Error signing up:', error.message);
       throw error;
     }
   };
 
-  // Sign in function
+  // Sign in function with improved logging
   const signIn = async (email, password) => {
     try {
       setError(null);
+      console.log('Signing in with email:', email);
+      
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      console.log('Sign in response:', data, error);
+      
+      if (error) {
+        console.error('Sign in error:', error);
+        throw error;
+      }
+      
+      console.log('Sign in successful, user:', data.user);
+      
+      // Manually update the user state
+      setUser(data.user);
+      
       return data;
     } catch (error) {
+      console.error('Error in signIn function:', error);
       setError(error.message);
-      console.error('Error signing in:', error.message);
       throw error;
     }
   };
@@ -103,11 +135,11 @@ export function AuthProvider({ children }) {
     try {
       setError(null);
       const { error } = await supabase.auth.signOut();
+      
       if (error) throw error;
       setUser(null);
     } catch (error) {
       setError(error.message);
-      console.error('Error signing out:', error.message);
     }
   };
 
@@ -123,7 +155,6 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       setError(error.message);
-      console.error('Error resetting password:', error.message);
       throw error;
     }
   };
@@ -140,9 +171,17 @@ export function AuthProvider({ children }) {
       return { success: true };
     } catch (error) {
       setError(error.message);
-      console.error('Error updating password:', error.message);
       throw error;
     }
+  };
+
+  // Debug information
+  const debugInfo = {
+    userExists: !!user,
+    userEmail: user?.email,
+    isLoading: loading,
+    errorMessage: error,
+    authChangeEvent,
   };
 
   // The value that will be supplied to any consuming components
@@ -155,11 +194,12 @@ export function AuthProvider({ children }) {
     signOut,
     resetPassword,
     updatePassword,
+    debugInfo,
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 }

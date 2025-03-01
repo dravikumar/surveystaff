@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../supabaseClient';
 
 function LoginForm() {
   const [email, setEmail] = useState('');
@@ -8,7 +10,15 @@ function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const { signIn } = useAuth();
+  const { signIn, user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      console.log('User is logged in, redirecting to dashboard');
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -21,10 +31,21 @@ function LoginForm() {
     try {
       setError('');
       setLoading(true);
-      await signIn(email, password);
-      // Successful login will redirect via the AuthContext
+      console.log('Submitting login form with email:', email);
+      
+      const result = await signIn(email, password);
+      console.log('Login successful:', result);
+      
     } catch (error) {
-      setError(error.message || 'Failed to sign in');
+      console.error('Login form error:', error);
+      // Display a more user-friendly error message
+      if (error.message.includes('Invalid login credentials')) {
+        setError('Invalid email or password. Please try again.');
+      } else if (error.message.includes('Email not confirmed')) {
+        setError('Please confirm your email before logging in.');
+      } else {
+        setError(error.message || 'Failed to sign in. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -19,7 +19,10 @@ const Dashboard = () => (
 
 // Navigation Header component
 const Header = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
+
+  // Don't render anything while checking authentication
+  if (loading) return null;
 
   return (
     <header className="bg-white shadow-sm">
@@ -47,9 +50,6 @@ const Header = () => {
                 >
                   Log Out
                 </button>
-                <div className="ml-3 text-sm text-gray-500">
-                  {user.email}
-                </div>
               </>
             ) : (
               <Link to="/login" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
@@ -63,7 +63,42 @@ const Header = () => {
   );
 };
 
+// Add this debug component
+function AuthDebugger() {
+  const { user, loading, error, debugInfo } = useAuth();
+  
+  return (
+    <div className="fixed bottom-0 right-0 bg-gray-800 text-white p-4 m-4 rounded shadow-lg max-w-md text-xs">
+      <h3 className="font-bold mb-2">Auth Debug Info</h3>
+      <pre className="overflow-auto max-h-40">
+        {JSON.stringify({
+          user: user ? { 
+            id: user.id,
+            email: user.email,
+            role: user.role,
+            lastSignIn: user.last_sign_in_at
+          } : null,
+          loading,
+          error,
+          ...debugInfo
+        }, null, 2)}
+      </pre>
+    </div>
+  );
+}
+
 function AppContent() {
+  const { loading } = useAuth();
+
+  // Show a simple loading indicator while checking authentication
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="App min-h-screen bg-gray-100">
       <Header />
@@ -82,6 +117,8 @@ function AppContent() {
           <Route path="/" element={<AuthPage />} />
         </Routes>
       </div>
+      {/* Add the debugger */}
+      <AuthDebugger />
     </div>
   );
 }
