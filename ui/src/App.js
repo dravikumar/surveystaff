@@ -11,7 +11,7 @@ const Dashboard = () => (
   <div className="p-8">
     <h1 className="text-2xl font-bold mb-4">Your Surveys</h1>
     <p>You don't have any surveys yet. Create one to get started!</p>
-    <Link to="/create" className="mt-4 inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+    <Link to="/create" className="mt-4 inline-block bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
       Create Survey
     </Link>
   </div>
