@@ -25,11 +25,11 @@ class AIProcessView(APIView):
         {
             "query": "The text to process",
             "service": "openai",  # Optional, defaults to "openai"
-            "model": "gpt-4"      # Optional, service-specific parameters
+            "model": "gpt-4o-mini"      # Optional, defaults to "gpt-4o-mini"
         }
         """
         try:
-            query = request.data.get('query')
+            query = request.data.get('query')   #This would chanage to be the user input right? 
             if not query:
                 return Response(
                     {"success": False, "error": "Query is required"}, 
@@ -40,6 +40,10 @@ class AIProcessView(APIView):
             service = request.data.get('service', 'openai')
             kwargs = {k: v for k, v in request.data.items() 
                      if k not in ['query', 'service']}
+            
+            # Set default model if not provided
+            if 'model' not in kwargs:
+                kwargs['model'] = 'gpt-4o-mini'
             
             # Process the query
             orchestrator = AIOrchestrator()

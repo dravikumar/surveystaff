@@ -1,6 +1,8 @@
 import openai
 from django.conf import settings
 import logging
+import os
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -10,9 +12,17 @@ class OpenAIService:
     """
     
     def __init__(self):
-        openai.api_key = settings.OPENAI_API_KEY
-        
-    def generate_completion(self, prompt, model="gpt-4", max_tokens=1000):
+        # Load environment variables from .env file
+        # env_file = os.path.join(settings.BASE_DIR, '.env')
+        # if os.path.exists(env_file):
+        #     # Force reload to ensure we get the latest values
+        #     load_dotenv(env_file, override=True)
+        load_dotenv()
+        # Get API key from environment or fall back to settings
+        api_key = os.getenv('OPENAI_API_KEY')
+        openai.api_key = api_key if api_key else settings.OPENAI_API_KEY
+                    
+    def generate_completion(self, prompt, model="gpt-4o-mini", max_tokens=1000):
         """
         Generate a completion using OpenAI's API.
         
