@@ -1,7 +1,8 @@
 # SurveyStaff
 Full stack survey app
 
-This is a pretty straightforward survey app that has limited functionality (Sign in, survey creation, Home page, sign out) that connects to Supabase. It's a project to learn React, Django, and Supabase from framework and db lenses. It's even more intended to learn how to use Cursor + Claude hands-on.  
+This is a pretty straightforward survey app that has limited functionality (Sign in, survey creation, Home page, sign out) that connects to Supabase. It's a project to learn React, Django, and Supabase from framework and db lenses. It's even more intended to learn how to use Cursor + Claude hands-on along with OpenAI APIs in a web app.
+You can hit the server with an OAI call although it is not incorporated into the UI.
 
 Thanks to @Volo for the inspiration with his YouTube video, which provided the initial idea and structure behind this project. 
 
