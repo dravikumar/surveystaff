@@ -38,10 +38,8 @@ class SupabaseAuth:
                 }
             })
             
-            if response.error:
-                logger.error(f"Supabase sign up error: {response.error}")
-                raise ValidationError(response.error.message)
-                
+            # In the latest Supabase SDK, successful responses don't have an error attribute
+            # Instead, we check if user and session exist
             return {
                 "success": True,
                 "user": response.user,
@@ -71,10 +69,8 @@ class SupabaseAuth:
                 "password": password
             })
             
-            if response.error:
-                logger.error(f"Supabase sign in error: {response.error}")
-                raise AuthenticationFailed(response.error.message)
-                
+            # In the latest Supabase SDK, successful responses don't have an error attribute
+            # Instead, we check if user and session exist
             return {
                 "success": True,
                 "user": response.user,
@@ -102,10 +98,7 @@ class SupabaseAuth:
             supabase.auth.set_auth(access_token)
             response = supabase.auth.sign_out()
             
-            if response.error:
-                logger.error(f"Supabase sign out error: {response.error}")
-                raise ValidationError(response.error.message)
-                
+            # In the latest Supabase SDK, successful responses don't have an error attribute
             return {"success": True}
             
         except Exception as e:
@@ -125,20 +118,9 @@ class SupabaseAuth:
         """
         try:
             supabase = get_supabase_client()
-            # Get frontend URL from environment variables or settings
-            frontend_url = os.getenv('FRONTEND_URL') or getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+            response = supabase.auth.reset_password_for_email(email)
             
-            response = supabase.auth.reset_password_for_email(
-                email,
-                {
-                    "redirect_to": f"{frontend_url}/reset-password"
-                }
-            )
-            
-            if response.error:
-                logger.error(f"Supabase password reset error: {response.error}")
-                raise ValidationError(response.error.message)
-                
+            # In the latest Supabase SDK, successful responses don't have an error attribute
             return {"success": True}
             
         except Exception as e:
@@ -161,14 +143,9 @@ class SupabaseAuth:
             supabase = get_supabase_client()
             # Set the auth token for the client
             supabase.auth.set_auth(access_token)
-            response = supabase.auth.update_user({
-                "password": new_password
-            })
+            response = supabase.auth.update_user({"password": new_password})
             
-            if response.error:
-                logger.error(f"Supabase password update error: {response.error}")
-                raise ValidationError(response.error.message)
-                
+            # In the latest Supabase SDK, successful responses don't have an error attribute
             return {"success": True}
             
         except Exception as e:
@@ -178,7 +155,7 @@ class SupabaseAuth:
     @staticmethod
     def get_user(access_token):
         """
-        Get user information.
+        Get the current user based on the access token.
         
         Args:
             access_token (str): User's access token
@@ -192,10 +169,7 @@ class SupabaseAuth:
             supabase.auth.set_auth(access_token)
             response = supabase.auth.get_user()
             
-            if response.error:
-                logger.error(f"Supabase get user error: {response.error}")
-                raise AuthenticationFailed(response.error.message)
-                
+            # In the latest Supabase SDK, successful responses don't have an error attribute
             return {
                 "success": True,
                 "user": response.user

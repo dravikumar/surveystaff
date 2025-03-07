@@ -5,4 +5,5 @@ supabase>=2.0.0
 openai>=1.0.0
 requests>=2.31.0
 python-jose>=3.3.0
-cryptography>=41.0.0 
+cryptography>=41.0.0
+django-cors-headers>=4.3.1 

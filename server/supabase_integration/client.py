@@ -1,6 +1,5 @@
 from supabase import create_client, Client
 from django.conf import settings
-from django.core.cache import cache
 from dotenv import load_dotenv
 import logging
 import os
@@ -10,15 +9,13 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# Cache key for the Supabase client
-SUPABASE_CLIENT_CACHE_KEY = 'supabase_client'
-# Cache timeout in seconds (5 minutes)
-SUPABASE_CLIENT_CACHE_TIMEOUT = 300
+# Module-level singleton for the Supabase client
+_supabase_client = None
 
 def get_supabase_client():
     """
     Returns a configured Supabase client using settings from Django settings.
-    Uses caching to avoid creating a new client for every request.
+    Uses a module-level singleton to avoid creating a new client for every request.
     
     Returns:
         Client: Configured Supabase client
@@ -27,12 +24,12 @@ def get_supabase_client():
         ValueError: If Supabase URL or key is missing
         Exception: For other errors
     """
+    global _supabase_client
+    
     try:
-        # Try to get client from cache first
-        cached_client = cache.get(SUPABASE_CLIENT_CACHE_KEY)
-        if cached_client:
-            logger.debug("Using cached Supabase client")
-            return cached_client
+        # Return existing client if available
+        if _supabase_client is not None:
+            return _supabase_client
         
         # Get URL and key from environment variables or settings
         url = os.getenv('SUPABASE_URL') or settings.SUPABASE_URL
@@ -45,28 +42,22 @@ def get_supabase_client():
         
         logger.info(f"Creating new Supabase client with URL: {url}")
         
-        # Create client with additional options
-        client = create_client(url, key, {
-            'auto_refresh_token': True,
-            'persist_session': False,
-            'detect_session_in_url': False
-        })
+        # Create client - removed options parameter for compatibility with supabase 2.13.0
+        _supabase_client = create_client(url, key)
         
-        # Cache the client
-        cache.set(SUPABASE_CLIENT_CACHE_KEY, client, SUPABASE_CLIENT_CACHE_TIMEOUT)
-        
-        return client
+        return _supabase_client
     except Exception as e:
         logger.error(f"Error creating Supabase client: {str(e)}")
         raise
 
-def clear_supabase_client_cache():
+def clear_supabase_client():
     """
-    Clears the Supabase client from cache.
+    Clears the Supabase client singleton.
     Useful when configuration changes.
     """
-    cache.delete(SUPABASE_CLIENT_CACHE_KEY)
-    logger.info("Supabase client cache cleared")
+    global _supabase_client
+    _supabase_client = None
+    logger.info("Supabase client singleton cleared")
 
 def get_supabase_url():
     """

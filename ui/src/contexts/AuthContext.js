@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-// Import supabase but don't use it yet
-import { supabase } from '../supabaseClient';
+// Import auth service instead of direct Supabase client
+import { authService } from '../api';
 
 // Create the authentication context
 const AuthContext = createContext();
@@ -13,180 +13,225 @@ export function useAuth() {
 // Provider component that wraps your app and makes auth object available to any child component that calls useAuth()
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [authChangeEvent, setAuthChangeEvent] = useState(null);
 
-  // Check for existing session when the component mounts
+  // Check for existing session/token in localStorage
   useEffect(() => {
-    let isMounted = true;
-    console.log('AuthProvider useEffect running');
-    
-    const getSession = async () => {
+    const checkSession = async () => {
       try {
-        console.log('Checking for session...');
-        const { data, error } = await supabase.auth.getSession();
+        setLoading(true);
         
-        console.log('Session response:', data, error);
+        // Get token from localStorage
+        const token = localStorage.getItem('supabase_auth_token');
         
-        if (error) {
-          console.error('Session error:', error);
-          if (isMounted) setError(error.message);
-        } else if (data?.session) {
-          console.log('Session found, user:', data.session.user);
-          if (isMounted) setUser(data.session.user);
-        } else {
-          console.log('No session found');
-        }
-      } catch (err) {
-        console.error('Error in getSession:', err);
-        if (isMounted) setError(err.message);
-      } finally {
-        if (isMounted) {
-          console.log('Setting loading to false');
-          setLoading(false);
-        }
-      }
-    };
-
-    // Call getSession
-    getSession();
-
-    // Listen for auth changes
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        console.log('Auth state changed:', event, session ? 'session exists' : 'no session');
-        setAuthChangeEvent({ event, timestamp: new Date().toISOString() });
-        
-        if (isMounted) {
-          if (session) {
-            console.log('Setting user from auth change:', session.user);
-            setUser(session.user);
+        if (token) {
+          // Verify session is still valid
+          const response = await authService.verifySession(token);
+          
+          if (response.success) {
+            setSession(response.session);
+            
+            // Get user data
+            const userResponse = await authService.getCurrentUser(token);
+            if (userResponse.success) {
+              setUser(userResponse.user);
+            }
           } else {
-            console.log('Setting user to null from auth change');
+            // Session expired or invalid, clean up
+            localStorage.removeItem('supabase_auth_token');
+            setSession(null);
             setUser(null);
           }
-          setLoading(false);
         }
-      }
-    );
-
-    // Cleanup subscription on unmount
-    return () => {
-      console.log('Cleanup function running');
-      isMounted = false;
-      if (authListener && authListener.subscription) {
-        console.log('Cleaning up auth listener');
-        authListener.subscription.unsubscribe();
+      } catch (error) {
+        console.error('Session verification error:', error);
+        setError(error.message);
+        // Clean up if there's an error
+        localStorage.removeItem('supabase_auth_token');
+        setSession(null);
+        setUser(null);
+      } finally {
+        setLoading(false);
       }
     };
+    
+    checkSession();
   }, []);
 
-  // Sign up function
-  const signUp = async (email, password) => {
+  // Sign up a new user
+  const signUp = async (email, password, metadata = {}) => {
     try {
+      setLoading(true);
       setError(null);
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
       
-      if (error) throw error;
-      return data;
+      const response = await authService.signUp(email, password, metadata);
+      
+      if (response.success) {
+        setUser(response.user);
+        setSession(response.session);
+        
+        // Store token in localStorage
+        if (response.session?.access_token) {
+          localStorage.setItem('supabase_auth_token', response.session.access_token);
+        }
+        
+        return response;
+      } else {
+        throw new Error(response.error || 'Sign up failed');
+      }
     } catch (error) {
+      console.error('Sign up error:', error);
       setError(error.message);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Sign in function with improved logging
+  // Sign in a user
   const signIn = async (email, password) => {
     try {
+      setLoading(true);
       setError(null);
-      console.log('Signing in with email:', email);
       
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const response = await authService.signIn(email, password);
       
-      console.log('Sign in response:', data, error);
-      
-      if (error) {
-        console.error('Sign in error:', error);
-        throw error;
+      if (response.success) {
+        setUser(response.user);
+        setSession(response.session);
+        
+        // Store token in localStorage
+        if (response.session?.access_token) {
+          localStorage.setItem('supabase_auth_token', response.session.access_token);
+        }
+        
+        return response;
+      } else {
+        throw new Error(response.error || 'Sign in failed');
       }
-      
-      console.log('Sign in successful, user:', data.user);
-      
-      // Manually update the user state
-      setUser(data.user);
-      
-      return data;
     } catch (error) {
-      console.error('Error in signIn function:', error);
+      console.error('Sign in error:', error);
       setError(error.message);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Sign out function
+  // Sign out the current user
   const signOut = async () => {
     try {
+      setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.signOut();
       
-      if (error) throw error;
+      const token = localStorage.getItem('supabase_auth_token');
+      
+      if (token) {
+        await authService.signOut(token);
+      }
+      
+      // Always clean up local state, even if API call fails
+      localStorage.removeItem('supabase_auth_token');
       setUser(null);
+      setSession(null);
+      
+      return { success: true };
     } catch (error) {
+      console.error('Sign out error:', error);
       setError(error.message);
+      
+      // Still clean up local state
+      localStorage.removeItem('supabase_auth_token');
+      setUser(null);
+      setSession(null);
+      
+      throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Reset password function
+  // Send password reset email
   const resetPassword = async (email) => {
     try {
+      setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
       
-      if (error) throw error;
-      return { success: true };
+      const response = await authService.resetPassword(email);
+      
+      return response;
     } catch (error) {
+      console.error('Reset password error:', error);
       setError(error.message);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Update password function
+  // Update user password
   const updatePassword = async (newPassword) => {
     try {
+      setLoading(true);
       setError(null);
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
-      });
       
-      if (error) throw error;
-      return { success: true };
+      const token = localStorage.getItem('supabase_auth_token');
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const response = await authService.updatePassword(token, newPassword);
+      
+      return response;
     } catch (error) {
+      console.error('Update password error:', error);
       setError(error.message);
       throw error;
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Debug information
-  const debugInfo = {
-    userExists: !!user,
-    userEmail: user?.email,
-    isLoading: loading,
-    errorMessage: error,
-    authChangeEvent,
+  // Update user profile
+  const updateProfile = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const token = localStorage.getItem('supabase_auth_token');
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+      
+      const response = await authService.updateUser(token, userData);
+      
+      if (response.success) {
+        setUser(response.user);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Update profile error:', error);
+      setError(error.message);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // The value that will be supplied to any consuming components
+  // Get current user's token
+  const getToken = () => {
+    return localStorage.getItem('supabase_auth_token');
+  };
+
+  // Value object that will be shared with components that use this context
   const value = {
     user,
+    session,
     loading,
     error,
     signUp,
@@ -194,7 +239,8 @@ export function AuthProvider({ children }) {
     signOut,
     resetPassword,
     updatePassword,
-    debugInfo,
+    updateProfile,
+    getToken,
   };
 
   return (

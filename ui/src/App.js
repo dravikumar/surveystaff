@@ -2,9 +2,12 @@ import React from 'react';
 import './App.css';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import SurveyDesigner from './components/SurveyDesigner';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './hooks';
 import AuthPage from './components/auth/AuthPage';
 import PrivateRoute from './components/auth/PrivateRoute';
+import DataExample from './components/examples/DataExample';
+import StorageExample from './components/examples/StorageExample';
 
 // Simple Dashboard component (placeholder)
 const Dashboard = () => (
@@ -14,6 +17,24 @@ const Dashboard = () => (
     <Link to="/create" className="mt-4 inline-block bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded">
       Create Survey
     </Link>
+    
+    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-2">Data Operations</h2>
+        <p className="text-gray-600 mb-4">Example of CRUD operations using our data service</p>
+        <Link to="/examples/data" className="text-blue-600 hover:text-blue-800">
+          View Example →
+        </Link>
+      </div>
+      
+      <div className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-2">Storage Operations</h2>
+        <p className="text-gray-600 mb-4">Example of file operations using our storage service</p>
+        <Link to="/examples/storage" className="text-blue-600 hover:text-blue-800">
+          View Example →
+        </Link>
+      </div>
+    </div>
   </div>
 );
 
@@ -48,12 +69,15 @@ const Header = () => {
                   onClick={signOut}
                   className="ml-4 bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm"
                 >
-                  Log Out
+                  Sign Out
                 </button>
+                <div className="ml-3 text-sm text-gray-600">
+                  {user.email}
+                </div>
               </>
             ) : (
-              <Link to="/login" className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm">
-                Log In
+              <Link to="/login" className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                Log In / Sign Up
               </Link>
             )}
           </div>
@@ -111,6 +135,8 @@ function AppContent() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/create" element={<SurveyDesigner />} />
+            <Route path="/examples/data" element={<DataExample />} />
+            <Route path="/examples/storage" element={<StorageExample />} />
           </Route>
           
           {/* Default route */}
